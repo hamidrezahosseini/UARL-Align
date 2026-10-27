@@ -2,6 +2,9 @@
 
 MAFFT_CMD = r"C:\Program Files (x86)\ClustalW2\mafft-win\mafft.bat"
 
+# Set explicitly to "dna", "rna", or "protein" when known.
+# "auto" infers the type from the observed sequence symbols.
+SEQUENCE_TYPE = "auto"
 
 # ---------- RL ----------
 RL_LR = 0.005

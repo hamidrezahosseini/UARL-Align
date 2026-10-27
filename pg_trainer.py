@@ -1,73 +1,90 @@
-# pg_trainer.py
+"""
+Proper REINFORCE policy-gradient for alignment refinement.
 
+Key fixes:
+    1. Gaussian policy over weights (continuous action space).
+    2. Action is SAMPLED (not deterministic) → exploration.
+    3. Training is INTERLEAVED with search (diverse states).
+    4. Standard policy-gradient loss with return-to-go and EMA baseline.
+"""
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
-from column_confidence import compute_column_confidence
-from mutations import adaptive_mutation
-from reward import compute_reward
 
 
 class PGTrainer:
     def __init__(self, cfg):
         self.cfg = cfg
         self.episode = 0
+        self.baseline = 0.0
 
+        # 3-D state: [mean U, std U, gap_ratio] → 3-D Gaussian mean
         self.policy = nn.Sequential(
-            nn.Linear(1, 32),
+            nn.Linear(3, 64),
             nn.ReLU(),
-            nn.Linear(32, 3),
-            nn.Softplus()
+            nn.Linear(64, 3),
         ).float()
-
+        self.log_std = nn.Parameter(torch.tensor([-1.0, -1.0, -1.0]))
         self.optimizer = optim.Adam(
-            self.policy.parameters(),
-            lr=cfg.RL_LR
+            list(self.policy.parameters()) + [self.log_std],
+            lr=cfg.RL_LR,
         )
 
-        self.history = []
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _state(aln):
+        from uncertainty import column_uncertainties
+        try:
+            u = column_uncertainties(aln)
+        except Exception:
+            u = [0.5] * len(aln[0])
+        u_mean = float(np.mean(u)) if u else 0.0
+        u_std = float(np.std(u)) if u else 0.0
+        n, L = len(aln), len(aln[0])
+        g = sum(s.count("-") for s in aln)
+        g_ratio = g / (n * L) if n * L else 0.0
+        return np.array([u_mean, u_std, g_ratio], dtype=np.float32)
 
-    def get_phase(self):
-        split = int(self.cfg.N_EPISODES * self.cfg.PHASE_SPLIT)
-        return "explore" if self.episode < split else "exploit"
+    # ------------------------------------------------------------------
+    def sample_weights(self, aln):
+        """Sample weights from N(μ(s), σ²) and return (α, β, γ, log_prob)."""
+        s = torch.from_numpy(self._state(aln))
+        mean = self.policy(s)
+        std = torch.exp(self.log_std).clamp(0.1, 1.0)
+        dist = torch.distributions.Normal(mean, std)
+        z = dist.rsample()                 # reparametrized → gradients flow
+        w = torch.sigmoid(z)               # bounded to (0, 1)
+        a, b, c = float(w[0]), float(w[1]), float(w[2])
+        # Log-probability of sigmoid-transformed Gaussian (Jacobian)
+        jac = torch.log(w * (1 - w) + 1e-8).sum()
+        log_prob = dist.log_prob(z).sum() - jac
+        return a, b, c, log_prob
 
-    def train_step(self, aln):
-        phase = self.get_phase()
+    # ------------------------------------------------------------------
+    def update(self, log_probs, rewards, gamma=0.99):
+        """REINFORCE with return-to-go and EMA baseline."""
+        if not log_probs:
+            return
+        returns = np.zeros(len(rewards), dtype=np.float64)
+        R = 0.0
+        for k in range(len(rewards) - 1, -1, -1):
+            R = rewards[k] + gamma * R
+            returns[k] = R
 
-        col_unc = compute_column_confidence(aln)
-        u_mean = torch.tensor(
-            [[float(col_unc.mean())]],
-            dtype=torch.float32
-        )
+        advantages = torch.tensor(returns - self.baseline, dtype=torch.float32)
 
-        params = self.policy(u_mean)
-        alpha, beta, gamma = params[0]
-
-        # phase-aware weighting
-        self.cfg.ALPHA = alpha.item()
-        self.cfg.BETA  = beta.item()
-        self.cfg.GAMMA = gamma.item() if phase == "exploit" else 0.0
-
-        new_aln = adaptive_mutation(aln, col_unc, self.cfg, phase)
-
-        reward, _ = compute_reward(aln, new_aln, self.cfg)
-        reward_t = torch.tensor(reward, dtype=torch.float32)
-
-        loss = -reward_t * params.sum()
+        loss = 0.0
+        for lp, adv in zip(log_probs, advantages):
+            loss = loss - lp * adv
 
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(
+            list(self.policy.parameters()) + [self.log_std], 1.0
+        )
         self.optimizer.step()
 
-        self.history.append({
-            "episode": self.episode,
-            "phase": phase,
-            "reward": reward,
-            "alpha": self.cfg.ALPHA,
-            "beta": self.cfg.BETA,
-            "gamma": self.cfg.GAMMA
-        })
-
-        self.episode += 1
-        return self.history[-1]
+        for r in returns:
+            self.baseline = 0.95 * self.baseline + 0.05 * r

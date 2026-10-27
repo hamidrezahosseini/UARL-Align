@@ -22,7 +22,7 @@ from column_confidence import (
 # Settings
 # --------------------------------------------------
 N_RUNS = 15
-N_EPISODES = 100
+N_EPISODES = 60
 
 # --------------------------------------------------
 # Header
@@ -164,8 +164,8 @@ for s in best["alignment"]:
 # --------------------------------------------------
 print("\n[4] GUIDANCE-style column confidence analysis]")
 
-conf_mafft = compute_column_confidence(best["seed_alignment"])
-conf_rl    = compute_column_confidence(best["alignment"])
+conf_mafft = compute_column_confidence(best["seed_alignment"], sequence_type=getattr(cfg, "SEQUENCE_TYPE", "auto"),)
+conf_rl    = compute_column_confidence(best["alignment"], sequence_type=getattr(cfg, "SEQUENCE_TYPE", "auto"),)
 
 plot_guidance_style(
     conf_rl=conf_rl,
