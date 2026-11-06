@@ -1,0 +1,3 @@
+Phase,Mean α_eff,Mean β_eff,Mean γ_eff,Normalized α_eff share,Normalized β_eff share,Normalized γ_eff share,CV across runs
+Explore,0.50165,0.500245,0.502298,0.33353,0.332572,0.333898,0.017467
+Exploit,0.499247,0.497792,0.503838,0.332642,0.331684,0.335674,0.013767

@@ -1,0 +1,27 @@
+========================================================================
+  EXPERIMENTAL PROTOCOL  (Reviewer #6)
+========================================================================
+  Timestamp        : 2026-11-06 03:15:00
+  Platform         : Windows-10-10.0.19041-SP0
+  Python           : 3.9.2
+  PyTorch          : 2.8.0+cpu
+  NumPy            : 2.0.2
+  MAFFT            : C:\Program Files (x86)\ClustalW2\mafft-win\mafft.bat
+  ClustalW         : None
+  Seeds (20)        : [42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61]
+  Budget/run       : 10000
+  Datasets (7)    : ['1aboA_ref1', '1fjlA_ref1', '1hfh_ref1', '1idy_ref1', '1pfc_ref1', '1tgxA_ref1', 'RNAstrAlign_group_I_intron_database__IA1']
+  Baselines        : ['MAFFT']
+  Bootstrap        : 20000
+  CI / FDR alpha   : 0.05 / 0.05
+  BON sizes        : [1, 5, 10]
+  Total runtime    : 260.5 min
+========================================================================
+  Statistical tests used:
+    * Bootstrap CI on the mean (per method)
+    * Paired bootstrap CI on the difference
+    * Wilcoxon signed-rank (paired, across datasets)
+    * Paired t-test
+    * Cohen's d (paired) with effect-size labels
+    * Benjamini-Hochberg correction (FDR = 0.05)
+========================================================================

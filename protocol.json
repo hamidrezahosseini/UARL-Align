@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-11-06 03:15:00",
+  "python_version": "3.9.2",
+  "platform": "Windows-10-10.0.19041-SP0",
+  "torch_version": "2.8.0+cpu",
+  "numpy_version": "2.0.2",
+  "pandas_version": "2.3.3",
+  "scipy_version": "1.13.1",
+  "mafft_path": "C:\\Program Files (x86)\\ClustalW2\\mafft-win\\mafft.bat",
+  "clustalw_path": null,
+  "budget_per_run": 10000,
+  "n_seeds": 20,
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61
+  ],
+  "datasets": [
+    "1aboA_ref1",
+    "1fjlA_ref1",
+    "1hfh_ref1",
+    "1idy_ref1",
+    "1pfc_ref1",
+    "1tgxA_ref1",
+    "RNAstrAlign_group_I_intron_database__IA1"
+  ],
+  "baselines": [
+    "MAFFT"
+  ],
+  "n_bootstrap": 20000,
+  "ci_alpha": 0.05,
+  "fdr_alpha": 0.05,
+  "bon_sizes": [
+    1,
+    5,
+    10
+  ],
+  "total_runtime_seconds": 15631.2,
+  "total_runs": 140,
+  "randomness": {
+    "rngs": [
+      "random",
+      "np.random.legacy",
+      "np.random.default_rng",
+      "torch"
+    ],
+    "per_run_formula": "run_seed = seed + md5(dataset)[:8] % 1000"
+  }
+}
